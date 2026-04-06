@@ -1,59 +1,183 @@
-/* App 主样式 - Airbnb 风格 */
-.App {
+/* ========================================
+   App Layout - 现代 SaaS 风格
+   ======================================== */
+
+.app {
   min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(102, 126, 234, 0.12), transparent 30%),
+    radial-gradient(circle at top right, rgba(72, 187, 120, 0.08), transparent 24%),
+    linear-gradient(180deg, #F8FAFC 0%, #FFFFFF 100%);
   display: flex;
   flex-direction: column;
-  background-color: #FFFFFF;
 }
 
 .app-header {
-  background: linear-gradient(135deg, #FF5A5F 0%, #FF385C 100%);
-  color: white;
-  padding: 40px 20px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.8);
 }
 
-.app-header h1 {
-  font-size: 36px;
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   font-weight: 700;
-  margin-bottom: 8px;
+  color: #111827;
 }
 
-.app-header p {
-  font-size: 18px;
-  font-weight: 300;
-  opacity: 0.95;
+.logo-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.875rem;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.25);
+}
+
+.logo-text {
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.nav-links a {
+  font-size: 0.875rem;
+  color: #4B5563;
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  background: rgba(243, 244, 246, 0.8);
+}
+
+.nav-links a:hover {
+  color: #111827;
+  background: rgba(229, 231, 235, 0.9);
+}
+
+.hero-section {
+  padding: 4rem 1.5rem 2rem;
+}
+
+.hero-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.hero-title {
+  font-size: clamp(2.25rem, 5vw, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: #111827;
+  margin-bottom: 1rem;
+}
+
+.gradient-text {
+  display: block;
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 50%, #4F46E5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-description {
+  max-width: 720px;
+  margin: 0 auto 1.75rem;
+  color: #6B7280;
+  font-size: 1.1rem;
+}
+
+.hero-features {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.feature-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(229, 231, 235, 0.9);
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  color: #374151;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.feature-icon {
+  font-size: 1rem;
 }
 
 .app-main {
   flex: 1;
-  max-width: 1200px;
   width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 0 1.5rem 4rem;
 }
 
 .app-footer {
-  background-color: #F7F7F7;
-  color: #767676;
-  text-align: center;
-  padding: 20px;
-  font-size: 14px;
-  border-top: 1px solid #EBEBEB;
+  border-top: 1px solid rgba(229, 231, 235, 0.9);
+  background: rgba(255, 255, 255, 0.75);
 }
 
-/* 响应式 */
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.footer-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  color: #6B7280;
+  font-size: 0.875rem;
+}
+
+.footer-info strong {
+  color: #111827;
+}
+
 @media (max-width: 768px) {
-  .app-header h1 {
-    font-size: 28px;
+  .header-content,
+  .footer-content {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
-  .app-header p {
-    font-size: 16px;
+  .hero-section {
+    padding-top: 2.5rem;
+  }
+
+  .hero-description {
+    font-size: 1rem;
   }
 
   .app-main {
-    padding: 20px 15px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 3rem;
+  }
+
+  .footer-info {
+    flex-direction: column;
   }
 }

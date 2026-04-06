@@ -1,27 +1,38 @@
-/* PodcastGenerator 组件样式 - Airbnb 风格 */
+/* ========================================
+   Podcast Generator - 现代 SaaS 风格
+   ======================================== */
+
 .podcast-generator {
-  max-width: 900px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-/* 通用 Section 样式 */
+/* 统一卡片 */
+.section,
+.player-section,
+.cover-section,
+.trace-ids,
+.logs-section {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(229, 231, 235, 0.9);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
+}
+
 .section {
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid #EBEBEB;
+  padding: 1.5rem;
 }
 
 .section h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #484848;
-  margin-bottom: 16px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 /* 输入区域 */

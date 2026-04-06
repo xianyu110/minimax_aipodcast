@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import './PodcastGenerator.css';
 
 const PodcastGenerator = () => {
-  // 状态管理
   const [apiKey, setApiKey] = useState('');
   const [textInput, setTextInput] = useState('');
   const [urlInput, setUrlInput] = useState('');
@@ -22,29 +21,27 @@ const PodcastGenerator = () => {
   const [script, setScript] = useState([]);
   const [coverImage, setCoverImage] = useState('');
   const [traceIds, setTraceIds] = useState([]);
-
   const [audioUrl, setAudioUrl] = useState('');
   const [scriptUrl, setScriptUrl] = useState('');
-
   const [showLogs, setShowLogs] = useState(false);
-
-  // 渐进式播放相关状态 - 双缓冲方案
-  const [activePlayer, setActivePlayer] = useState(0);  // 当前激活的播放器 (0 或 1)
+  const [activePlayer, setActivePlayer] = useState(0);
   const [player0Url, setPlayer0Url] = useState('');
   const [player1Url, setPlayer1Url] = useState('');
-
-  // URL 解析警告
-  const [urlWarning, setUrlWarning] = useState(null);  // {message: string, error_code: string}
+  const [urlWarning, setUrlWarning] = useState(null);
 
   const audioRef0 = useRef(null);
   const audioRef1 = useRef(null);
 
-  // API 基础 URL（从环境变量读取，默认为空字符串表示同源）
-  // 开发环境通过 package.json 的 proxy 配置代理到 http://localhost:5001
-  // 生产环境通过 Nginx 反向代理到后端服务
   const API_URL = process.env.REACT_APP_API_URL || '';
 
-  // 处理文件上传
+  const addLog = (message) => {
+    setLogs((prev) => [...prev, { time: new Date().toLocaleTimeString(), message }]);
+  };
+
+  const addTraceId = (api, traceId) => {
+    setTraceIds((prev) => [...prev, { api, traceId }]);
+  };
+
   const handlePdfChange = (e) => {
     const file = e.target.files[0];
     if (file && file.type === 'application/pdf') {
@@ -56,70 +53,39 @@ const PodcastGenerator = () => {
 
   const handleSpeaker1AudioChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setSpeaker1Audio(file);
-    }
+    if (file) setSpeaker1Audio(file);
   };
 
   const handleSpeaker2AudioChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setSpeaker2Audio(file);
-    }
+    if (file) setSpeaker2Audio(file);
   };
 
-  // 添加日志
-  const addLog = (message) => {
-    setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), message }]);
-  };
-
-  // 添加 Trace ID
-  const addTraceId = (api, traceId) => {
-    setTraceIds(prev => [...prev, { api, traceId }]);
-  };
-
-  // 双缓冲播放器 - 后端已控制更新频率，前端直接更新即可
-  const updateProgressiveAudio = (newUrl) => {
-    console.log(`[前端播放器] 收到后端更新事件，URL: ${newUrl.substring(newUrl.length - 30)}`);
-    performUpdate(newUrl);
-  };
-
-  // 执行实际的播放器更新
   const performUpdate = (newUrl) => {
-    console.log(`[播放器更新] 开始更新，URL: ${newUrl.substring(newUrl.length - 30)}`);
     const currentAudio = activePlayer === 0 ? audioRef0.current : audioRef1.current;
     const nextAudio = activePlayer === 0 ? audioRef1.current : audioRef0.current;
 
-    // 如果当前播放器正在播放
     if (currentAudio && !currentAudio.paused) {
       const currentTime = currentAudio.currentTime;
-      console.log(`[播放器更新] 当前播放中，位置: ${currentTime.toFixed(2)}s，将切换到播放器 ${activePlayer === 0 ? 1 : 0}`);
 
-      // 预加载下一个播放器
       if (activePlayer === 0) {
         setPlayer1Url(newUrl);
       } else {
         setPlayer0Url(newUrl);
       }
 
-      // 等待下一个播放器加载完成后切换
       setTimeout(() => {
         if (nextAudio) {
           nextAudio.currentTime = currentTime;
           nextAudio.play().then(() => {
-            // 切换激活的播放器
-            setActivePlayer(prev => prev === 0 ? 1 : 0);
-            // 暂停之前的播放器
-            if (currentAudio) {
-              currentAudio.pause();
-            }
-          }).catch(err => {
+            setActivePlayer((prev) => (prev === 0 ? 1 : 0));
+            if (currentAudio) currentAudio.pause();
+          }).catch((err) => {
             console.error('切换播放失败:', err);
           });
         }
       }, 500);
     } else {
-      // 如果没有播放，直接更新当前播放器
       if (activePlayer === 0) {
         setPlayer0Url(newUrl);
       } else {
@@ -128,9 +94,69 @@ const PodcastGenerator = () => {
     }
   };
 
-  // 生成播客
+  const updateProgressiveAudio = (newUrl) => {
+    performUpdate(newUrl);
+  };
+
+  const handleSSEEvent = (data) => {
+    switch (data.type) {
+      case 'progress':
+        setProgress(data.message);
+        addLog(data.message);
+        break;
+      case 'log':
+        addLog(data.message);
+        break;
+      case 'script_chunk':
+        setScript((prev) => [...prev, data.full_line]);
+        break;
+      case 'trace_id':
+        addTraceId(data.api, data.trace_id);
+        break;
+      case 'cover_image':
+        setCoverImage(data.image_url);
+        addLog('封面生成完成');
+        break;
+      case 'progressive_audio': {
+        const progressiveUrl = `${API_URL}${data.audio_url}`;
+        updateProgressiveAudio(progressiveUrl);
+
+        let logMessage;
+        if (data.message) {
+          logMessage = `✅ ${data.message}`;
+        } else if (data.sentence_number) {
+          logMessage = `✅ 第 ${data.sentence_number} 句已添加，播客时长: ${Math.round(data.duration_ms / 1000)}秒`;
+        } else {
+          logMessage = `✅ 开场音频已生成，播客时长: ${Math.round(data.duration_ms / 1000)}秒`;
+        }
+        addLog(logMessage);
+        break;
+      }
+      case 'complete':
+        setAudioUrl(data.audio_url);
+        setScriptUrl(data.script_url);
+        setIsGenerating(false);
+        setProgress('播客生成完成！');
+        addLog('🎉 播客生成完成！可以下载了');
+        break;
+      case 'url_parse_warning':
+        addLog(`⚠️ ${data.message}`);
+        setUrlWarning({ message: data.message, error_code: data.error_code });
+        if (data.error_code === '403') {
+          setProgress('网址解析遇到问题，但您可以继续使用其他输入方式');
+        }
+        break;
+      case 'error':
+        addLog(`❌ 错误: ${data.message}`);
+        setIsGenerating(false);
+        setProgress('');
+        break;
+      default:
+        console.log('未知事件类型:', data);
+    }
+  };
+
   const handleGenerate = async () => {
-    // 验证输入
     if (!apiKey.trim()) {
       alert('请输入 MiniMax API Key');
       return;
@@ -141,7 +167,6 @@ const PodcastGenerator = () => {
       return;
     }
 
-    // 清空之前的状态
     setLogs([]);
     setScript([]);
     setTraceIds([]);
@@ -154,7 +179,6 @@ const PodcastGenerator = () => {
     setUrlWarning(null);
     setIsGenerating(true);
 
-    // 构建 FormData
     const formData = new FormData();
     formData.append('api_key', apiKey);
     if (textInput) formData.append('text_input', textInput);
@@ -175,33 +199,28 @@ const PodcastGenerator = () => {
       formData.append('speaker2_audio', speaker2Audio);
     }
 
-    // 建立 SSE 连接
     try {
       const response = await fetch(`${API_URL}/api/generate_podcast`, {
         method: 'POST',
-        body: formData
+        body: formData,
       });
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = ''; // 用于累积不完整的行
+      let buffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        // 将新数据追加到缓冲区
         buffer += decoder.decode(value, { stream: true });
-
-        // 按行分割，但保留最后一个可能不完整的行
         const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // 保存最后一个不完整的行
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
           const trimmedLine = line.trim();
           if (trimmedLine.startsWith('data: ')) {
             const jsonStr = trimmedLine.substring(6);
-            // 跳过空的 data 行
             if (!jsonStr.trim()) continue;
 
             try {
@@ -209,16 +228,11 @@ const PodcastGenerator = () => {
               handleSSEEvent(data);
             } catch (e) {
               console.error('解析 SSE 数据失败:', e);
-              console.error('问题行长度:', jsonStr.length);
-              console.error('问题行开头:', jsonStr.substring(0, 100));
-              console.error('问题行结尾:', jsonStr.substring(Math.max(0, jsonStr.length - 100)));
-              // 不中断流程，继续处理其他事件
             }
           }
         }
       }
 
-      // 处理缓冲区中剩余的数据
       if (buffer.trim() && buffer.startsWith('data: ')) {
         try {
           const data = JSON.parse(buffer.substring(6));
@@ -234,97 +248,9 @@ const PodcastGenerator = () => {
     }
   };
 
-  // 处理 SSE 事件
-  const handleSSEEvent = (data) => {
-    switch (data.type) {
-      case 'progress':
-        setProgress(data.message);
-        addLog(data.message);
-        break;
-
-      case 'log':
-        addLog(data.message);
-        break;
-
-      case 'script_chunk':
-        setScript(prev => [...prev, data.full_line]);
-        break;
-
-      case 'trace_id':
-        addTraceId(data.api, data.trace_id);
-        break;
-
-      case 'cover_image':
-        setCoverImage(data.image_url);
-        addLog('封面生成完成');
-        break;
-
-      case 'audio_chunk':
-        // 这里可以实现流式音频播放
-        // 暂时跳过，等待complete事件获取完整音频
-        break;
-
-      case 'bgm':
-      case 'welcome_audio_chunk':
-        // BGM 和欢迎语音频事件，前端不需要处理
-        break;
-
-      case 'progressive_audio':
-        // 收到渐进式音频更新 - 使用双缓冲策略
-        const progressiveUrl = `${API_URL}${data.audio_url}`;
-
-        // 调用双缓冲更新函数（会自动累积并平滑切换）
-        updateProgressiveAudio(progressiveUrl);
-
-        // 使用后端发送的 message，或生成默认消息
-        let logMessage;
-        if (data.message) {
-          logMessage = `✅ ${data.message}`;
-        } else if (data.sentence_number) {
-          logMessage = `✅ 第 ${data.sentence_number} 句已添加，播客时长: ${Math.round(data.duration_ms / 1000)}秒`;
-        } else {
-          logMessage = `✅ 开场音频已生成，播客时长: ${Math.round(data.duration_ms / 1000)}秒`;
-        }
-        addLog(logMessage);
-        break;
-
-      case 'complete':
-        // 不覆盖 progressiveAudioUrl，因为渐进式文件已经是最终版本
-        // 只设置 audioUrl 和 scriptUrl 用于下载按钮
-        setAudioUrl(data.audio_url);
-        setScriptUrl(data.script_url);
-        setIsGenerating(false);
-        setProgress('播客生成完成！');
-        addLog('🎉 播客生成完成！可以下载了');
-        break;
-
-      case 'url_parse_warning':
-        // URL 解析失败的警告，但不中断流程
-        addLog(`⚠️ ${data.message}`);
-        setUrlWarning({
-          message: data.message,
-          error_code: data.error_code
-        });
-        if (data.error_code === '403') {
-          setProgress('网址解析遇到问题，但您可以继续使用其他输入方式');
-        }
-        break;
-
-      case 'error':
-        addLog(`❌ 错误: ${data.message}`);
-        setIsGenerating(false);
-        setProgress('');
-        break;
-
-      default:
-        console.log('未知事件类型:', data);
-    }
-  };
-
   return (
     <div className="podcast-generator">
-      {/* API Key 配置区 */}
-      <div className="section">
+      <section className="section">
         <h2>🔑 API Key 配置</h2>
         <div className="input-content">
           <div className="input-group">
@@ -341,10 +267,9 @@ const PodcastGenerator = () => {
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 输入内容区 */}
-      <div className="section">
+      <section className="section">
         <h2>📝 输入内容</h2>
         <p className="input-hint">以下三种输入方式可以单独使用或组合使用：</p>
         <div className="input-content">
@@ -384,10 +309,9 @@ const PodcastGenerator = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 音色选择区 */}
-      <div className="section">
+      <section className="section">
         <h2>🎤 选择音色</h2>
         <div className="voice-config">
           <div className="speaker-config">
@@ -478,18 +402,12 @@ const PodcastGenerator = () => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* 生成按钮 */}
-      <button
-        className="generate-btn"
-        onClick={handleGenerate}
-        disabled={isGenerating}
-      >
+      <button className="generate-btn" onClick={handleGenerate} disabled={isGenerating}>
         {isGenerating ? '🎙️ 生成中...' : '🚀 开始生成播客'}
       </button>
 
-      {/* URL 解析警告 */}
       {urlWarning && (
         <div className="warning-box">
           <div className="warning-icon">⚠️</div>
@@ -512,17 +430,14 @@ const PodcastGenerator = () => {
         </div>
       )}
 
-      {/* 进度显示 */}
       {progress && (
         <div className="progress-bar">
           <div className="progress-text">{progress}</div>
         </div>
       )}
 
-      {/* 播客播放器和封面 - 并排显示 */}
       {((player0Url || player1Url || audioUrl) || coverImage) && (
         <div className="player-cover-container">
-          {/* 播客封面 - 左侧 */}
           {coverImage && (
             <div className="cover-section">
               <h2>🖼️ 播客封面</h2>
@@ -530,11 +445,9 @@ const PodcastGenerator = () => {
             </div>
           )}
 
-          {/* 播客播放器 - 右侧 - 双缓冲 */}
           {(player0Url || player1Url || audioUrl) && (
             <div className="player-section">
               <h2>🎧 播客播放器</h2>
-              {/* 播放器 0 */}
               <audio
                 ref={audioRef0}
                 controls={activePlayer === 0}
@@ -543,7 +456,6 @@ const PodcastGenerator = () => {
                 preload="metadata"
                 style={{ display: activePlayer === 0 ? 'block' : 'none' }}
               />
-              {/* 播放器 1 */}
               <audio
                 ref={audioRef1}
                 controls={activePlayer === 1}
@@ -557,19 +469,17 @@ const PodcastGenerator = () => {
         </div>
       )}
 
-      {/* 对话脚本 */}
       {script.length > 0 && (
-        <div className="section">
+        <section className="section">
           <h2>📄 对话脚本</h2>
           <div className="script-box">
             {script.map((line, index) => (
               <p key={index}>{line}</p>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* 下载按钮 */}
       {audioUrl && (
         <div className="download-section">
           <a href={`${API_URL}${audioUrl}`} download className="download-btn">
@@ -588,9 +498,8 @@ const PodcastGenerator = () => {
         </div>
       )}
 
-      {/* 详细日志 */}
-      <div className="section logs-section">
-        <h2 onClick={() => setShowLogs(!showLogs)} style={{ cursor: 'pointer' }}>
+      <section className="section logs-section">
+        <h2 onClick={() => setShowLogs(!showLogs)}>
           🔍 详细日志 {showLogs ? '▼' : '▶'}
         </h2>
         {showLogs && (
@@ -602,9 +511,8 @@ const PodcastGenerator = () => {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Trace IDs */}
       {traceIds.length > 0 && (
         <div className="trace-ids">
           <h3>Trace IDs</h3>
