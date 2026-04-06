@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import './PodcastGenerator.css';
 
 const PodcastGenerator = () => {
-  const [apiKey, setApiKey] = useState('');
+
   const [textInput, setTextInput] = useState('');
   const [urlInput, setUrlInput] = useState('');
   const [pdfFile, setPdfFile] = useState(null);
@@ -157,11 +157,6 @@ const PodcastGenerator = () => {
   };
 
   const handleGenerate = async () => {
-    if (!apiKey.trim()) {
-      alert('请输入 MiniMax API Key');
-      return;
-    }
-
     if (!textInput && !urlInput && !pdfFile) {
       alert('请至少提供一种输入内容（文本/网址/PDF）');
       return;
@@ -180,7 +175,6 @@ const PodcastGenerator = () => {
     setIsGenerating(true);
 
     const formData = new FormData();
-    formData.append('api_key', apiKey);
     if (textInput) formData.append('text_input', textInput);
     if (urlInput) formData.append('url', urlInput);
     if (pdfFile) formData.append('pdf_file', pdfFile);
@@ -200,9 +194,11 @@ const PodcastGenerator = () => {
     }
 
     try {
+      const token = localStorage.getItem("access_token");
       const response = await fetch(`${API_URL}/api/generate_podcast`, {
-        method: 'POST',
+        method: "POST",
         body: formData,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       const reader = response.body.getReader();
@@ -250,24 +246,7 @@ const PodcastGenerator = () => {
 
   return (
     <div className="podcast-generator">
-      <section className="section">
-        <h2>🔑 API Key 配置</h2>
-        <div className="input-content">
-          <div className="input-group">
-            <label className="input-label">MiniMax API Key</label>
-            <input
-              type="password"
-              placeholder="请输入你的 MiniMax API Key"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="api-key-input"
-            />
-            <p className="input-description">
-              在 <a href="https://www.minimaxi.com/" target="_blank" rel="noopener noreferrer">MiniMax 官网</a> 获取你的 API Key
-            </p>
-          </div>
-        </div>
-      </section>
+
 
       <section className="section">
         <h2>📝 输入内容</h2>

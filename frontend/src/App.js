@@ -1,68 +1,69 @@
-import React from 'react';
-import './App.css';
-import PodcastGenerator from './components/PodcastGenerator';
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import DashboardPage from "./pages/DashboardPage";
+import PodcastGenerator from "./components/PodcastGenerator";
+import "./App.css";
+
+function AppNav() {
+  const { user, logout } = useAuth();
+  return (
+    <header className="app-header">
+      <div className="header-content">
+        <a href="/" className="logo" style={{ textDecoration: "none" }}>
+          <span className="logo-icon">🎙️</span>
+          <span className="logo-text">AI Podcast</span>
+        </a>
+        <nav className="nav-links">
+          {user ? (
+            <>
+              <a href="/generate">生成播客</a>
+              <a href="/dashboard">我的播客</a>
+              <button className="nav-logout" onClick={logout}>退出</button>
+            </>
+          ) : (
+            <>
+              <a href="/login">登录</a>
+              <a href="/register">注册</a>
+            </>
+          )}
+        </nav>
+      </div>
+    </header>
+  );
+}
 
 function App() {
   return (
-    <div className="app">
-      {/* Header */}
-      <header className="app-header">
-        <div className="header-content">
-          <div className="logo">
-            <span className="logo-icon">🎙️</span>
-            <span className="logo-text">AI Podcast</span>
-          </div>
-          <nav className="nav-links">
-            <a href="https://www.minimaxi.com" target="_blank" rel="noopener noreferrer">
-              MiniMax API
-            </a>
-          </nav>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-content">
-          <h1 className="hero-title">
-            3分钟生成
-            <span className="gradient-text">专业播客</span>
-          </h1>
-          <p className="hero-description">
-            输入文本、网址或 PDF，AI 自动生成双人对播播客<br />
-            支持自定义音色、实时预览、封面生成
-          </p>
-          <div className="hero-features">
-            <div className="feature-item">
-              <span className="feature-icon">⚡</span>
-              <span>快速生成</span>
+    <BrowserRouter>
+      <AuthProvider>
+        <div className="app">
+          <AppNav />
+          <Routes>
+            <Route path="/" element={<Navigate to="/generate" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute><DashboardPage /></ProtectedRoute>
+            } />
+            <Route path="/generate" element={
+              <ProtectedRoute><PodcastGenerator /></ProtectedRoute>
+            } />
+          </Routes>
+          <footer className="app-footer">
+            <div className="footer-content">
+              <div className="footer-info">
+                <p>Powered by <strong>MiniMax AI</strong></p>
+                <p>Built with ❤️ using Claude Code</p>
+              </div>
             </div>
-            <div className="feature-item">
-              <span className="feature-icon">🎨</span>
-              <span>智能封面</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">🎤</span>
-              <span>多种音色</span>
-            </div>
-          </div>
+          </footer>
         </div>
-      </section>
-
-      {/* Main Content */}
-      <main className="app-main">
-        <PodcastGenerator />
-      </main>
-
-      {/* Footer */}
-      <footer className="app-footer">
-        <div className="footer-content">
-          <div className="footer-info">
-            <p>Powered by <strong>MiniMax AI</strong></p>
-            <p>Built with ❤️ using Claude Code</p>
-          </div>
-        </div>
-      </footer>
-    </div>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

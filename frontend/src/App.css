@@ -181,3 +181,36 @@
     flex-direction: column;
   }
 }
+
+
+.nav-links a {
+  font-size: 0.875rem;
+  color: #4B5563;
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  background: rgba(243, 244, 246, 0.8);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nav-links a:hover {
+  color: #111827;
+  background: rgba(229, 231, 235, 0.9);
+}
+
+.nav-logout {
+  font-size: 0.875rem;
+  color: #4B5563;
+  padding: 0.5rem 0.875rem;
+  border-radius: 999px;
+  background: rgba(243, 244, 246, 0.8);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.nav-logout:hover {
+  color: #DC2626;
+  background: rgba(254, 226, 226, 0.8);
+}
